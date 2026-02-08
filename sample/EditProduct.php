@@ -1,5 +1,5 @@
 <?php
-require_once 'includes/config.php';
+require_once './sample/includes/config.php';
 
 $error_msg = "";
 $success_msg = "";

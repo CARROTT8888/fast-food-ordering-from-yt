@@ -19,7 +19,7 @@ img {
     </a>
     <div class="bx bx-menu" id="yt-icon" style="color: #fff;"></div>
     <ul class="navbar" style="align-items: center;">
-        <li><a href="#today-menu">Menu</a></li>
+        <li><a href="menu.php">Menu</a></li>
         <li><a href="/web/me/cart">Cart</a></li>
         <li><a href="/web/me/profile">Profile</a></li>
         <?php if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'staff'): ?>

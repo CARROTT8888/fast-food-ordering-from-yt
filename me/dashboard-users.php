@@ -26,8 +26,25 @@ $usersResult = $conn->query("SELECT userId, fullName, email, address, contactNum
 
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Poppins Font -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Boxicons CDN Link -->
+<link href='https://unpkg.com/boxicons@2.1.2/css/boxicons.min.css' rel='stylesheet'>
+
+<!-- CSS File -->
+<link rel="stylesheet" href="/styles/homepage.css">
+<title>Dashboard - User List</title>
+
+<!-- Webpage Icon -->
+<link rel="Icon" href="../img/youtube icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap"
+  rel="stylesheet">
 
   <style>
     * {
@@ -199,8 +216,43 @@ $usersResult = $conn->query("SELECT userId, fullName, email, address, contactNum
       <p>Customers</p>
     </div>
   </div>
-  <div class="header" style="display: flex; justify-content: center;">
-    <h2>You may explore the dashboard here!</h2>
+
+
+  <!-- ===== USERS TABLE ===== -->
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Address</th>
+          <th>Contact</th>
+          <th>Role</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <?php while ($user = $usersResult->fetch_assoc()): ?>
+          <tr>
+            <td><?= $user['userId'] ?></td>
+            <td><?= htmlspecialchars($user['fullName']) ?></td>
+            <td><?= htmlspecialchars($user['email']) ?></td>
+            <td><?= $user['address'] ?: '-' ?></td>
+            <td><?= $user['contactNumber'] ?></td>
+            <td>
+              <span class="badge <?= $user['role'] ?>">
+                <?= $user['role'] ?>
+              </span>
+            </td>
+            <td>
+              <button class="action-btn">Edit</button>
+            </td>
+          </tr>
+        <?php endwhile; ?>
+      </tbody>
+    </table>
   </div>
 
 </body>

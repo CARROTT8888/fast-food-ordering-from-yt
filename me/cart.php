@@ -1,509 +1,406 @@
 <?php
-require_once "../foodDB.php";
+require_once '../foodDB.php';
+session_start();
 
-if (!isset($conn)) {
-  die("Database connection variable \$conn not found. Please check foodDB.php");
-}
+$userId = $_SESSION['userId'];
 
-$sql = "
-  SELECT foodId, name, price, image
-  FROM foods
-  WHERE active = 'Yes'
-  ORDER BY foodId ASC
+$query = "
+SELECT c.cartId, c.quantity, f.name, f.price, f.image
+FROM carts c
+JOIN foods f ON c.foodId = f.foodId
+WHERE c.userId = ?
 ";
-$result = $conn->query($sql);
 
-if (!$result) {
-  die("SQL error: " . $conn->error);
-}
-
-$menuItems = [];
-while ($row = $result->fetch_assoc()) {
-  $menuItems[] = $row;
-}
-
-function safeImg($path)
-{
-  $p = trim((string) $path);
-  if ($p === "")
-    return "img/placeholder.jpg";
-  return $p;
-}
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Menu</title>
+  <meta charset="UTF-8">
+  <title>Your Cart</title>
+  <!-- Poppins Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Boxicons CDN Link -->
+  <link href='https://unpkg.com/boxicons@2.1.2/css/boxicons.min.css' rel='stylesheet'>
+
+  <!-- CSS File -->
+  <link rel="stylesheet" href="/styles/homepage.css">
+
+  <!-- Webpage Icon -->
+  <link rel="Icon" href="img/youtube icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
 
   <style>
-    :root {
-      --bg: #ffffff;
-      --card: #ffffff;
-      --muted: #6b7280;
-      --text: #111827;
-      --red: #e11d2e;
-      --red2: #ff2b3d;
-      --line: rgba(0, 0, 0, .08);
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
     body {
+      font-family: Poppins, sans-serif;
+      background: #f5f5f5;
       margin: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color: var(--text);
-      background: var(--bg);
+      padding: 40px;
     }
 
-    header {
+    /* layout */
+    .container {
       max-width: 1100px;
-      margin: 22px auto 10px;
-      padding: 0 16px;
+      margin: auto;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 30px;
+    }
+
+    /* CART ITEMS */
+    .cart-box {
+      background: white;
+      border-radius: 16px;
+      padding: 25px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, .05);
+    }
+
+    .item {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px;
+      gap: 15px;
+      padding: 15px 0;
+      border-bottom: 1px solid #eee;
     }
 
-    header h1 {
-      margin: 0;
-      font-size: 22px;
-      letter-spacing: .3px;
-    }
-
-    .cart-pill {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: rgba(255, 255, 255, .04);
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .badge {
-      min-width: 26px;
-      height: 26px;
-      border-radius: 999px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(180deg, var(--red2), var(--red));
-      font-weight: 800;
-      font-size: 13px;
-      padding: 0 8px;
-    }
-
-    .wrap {
-      max-width: 1100px;
-      margin: 0 auto 28px;
-      padding: 0 16px;
-      display: grid;
-      grid-template-columns: 1fr 330px;
-      gap: 16px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    .card {
-      position: relative;
-      border-radius: 18px;
-      overflow: hidden;
-      background: var(--card);
-      border: 1px solid var(--line);
-      min-height: 170px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, .08);
-    }
-
-    .card img {
-      width: 100%;
-      height: 170px;
+    .item img {
+      width: 80px;
+      height: 80px;
       object-fit: cover;
-      display: block;
-      filter: saturate(1.05) contrast(1.05);
-    }
-
-    .overlay {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg,
-          rgba(0, 0, 0, .55) 0%,
-          rgba(0, 0, 0, .35) 55%,
-          rgba(0, 0, 0, .10) 100%);
+      border-radius: 12px;
     }
 
     .info {
-      position: absolute;
-      left: 14px;
-      right: 14px;
-      bottom: 12px;
-      z-index: 2;
-    }
-
-    .name {
-      margin: 0 0 6px;
-      font-size: 18px;
-      font-weight: 900;
+      flex: 1;
     }
 
     .price {
-      margin: 0 0 10px;
-      color: #ffd1d6;
-      font-weight: 900;
+      font-weight: 600;
+      color: red;
     }
 
     .qty {
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 8px 10px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: rgba(255, 255, 255, .06);
+      gap: 8px;
     }
 
     .qty button {
-      width: 30px;
-      height: 30px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, .18);
-      background: rgba(255, 255, 255, .06);
-      color: var(--text);
-      cursor: pointer;
-      font-size: 18px;
-      line-height: 1;
-    }
-
-    .qty input {
-      width: 44px;
-      text-align: center;
+      width: 28px;
+      height: 28px;
       border: none;
-      outline: none;
-      background: transparent;
-      color: var(--text);
-      font-weight: 900;
-      font-size: 14px;
-    }
-
-    .add-btn {
-      margin-top: 10px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      border: none;
-      color: white;
-      font-weight: 900;
-      letter-spacing: .2px;
-      padding: 10px 14px;
-      border-radius: 999px;
+      background: #eee;
+      border-radius: 6px;
       cursor: pointer;
-      background: linear-gradient(180deg, var(--red2), var(--red));
-      box-shadow: 0 12px 24px rgba(225, 29, 46, .22);
+      font-weight: bold;
     }
 
-    .cart {
-      border: 1px solid var(--line);
-      background: #ffffff;
-      border-radius: 18px;
-      padding: 14px;
-      position: sticky;
-      top: 14px;
-      height: fit-content;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, .08);
+    .qty button:hover {
+      background: #ddd;
     }
 
-    .cart h2 {
-      margin: 0 0 10px;
-      font-size: 18px;
+    .subtotal {
+      width: 100px;
+      text-align: right;
+      font-weight: 600;
+      color: oklch(52.7% 0.154 150.069);
     }
 
-    .hint {
-      margin: 0 0 12px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.4;
-    }
-
-    .cart-list {
+    /* SUMMARY */
+    .summary {
+      background: white;
+      border-radius: 16px;
+      padding: 25px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, .05);
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      margin: 12px 0;
+      gap: 15px;
     }
 
-    .cart-item {
-      border: 1px solid rgba(255, 255, 255, .10);
-      background: rgba(0, 0, 0, .25);
-      border-radius: 14px;
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    textarea {
+      width: 90%;
       padding: 10px;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 8px;
-    }
-
-    .cart-item .title {
-      font-weight: 900;
-      margin: 0;
-      font-size: 14px;
-    }
-
-    .cart-item .sub {
-      margin: 2px 0 0;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .cart-item .right {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .mini-btn {
-      border: 1px solid rgba(255, 255, 255, .18);
-      background: rgba(255, 255, 255, .06);
-      color: var(--text);
       border-radius: 10px;
-      padding: 6px 8px;
-      cursor: pointer;
-      font-weight: 900;
-      font-size: 12px;
-    }
-
-    .mini-btn.danger {
-      border-color: rgba(255, 43, 61, .35);
-      color: #ffd1d6;
-    }
-
-    .total {
-      border-top: 1px solid rgba(255, 255, 255, .12);
-      margin-top: 12px;
-      padding-top: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
+      border: 1px solid #ddd;
+      resize: none;
+      margin-top: 10px;
     }
 
     .checkout {
-      width: 100%;
-      margin-top: 12px;
-      padding: 12px 14px;
-      border: none;
-      border-radius: 14px;
-      cursor: pointer;
+      background: red;
       color: white;
-      font-weight: 900;
-      background: linear-gradient(180deg, #22c55e, #16a34a);
-      opacity: .95;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
     }
 
-    .checkout:disabled {
-      opacity: .45;
-      cursor: not-allowed;
+    .checkout:hover {
+      opacity: .9;
     }
 
-    @media (max-width: 980px) {
-      .wrap {
+    .total {
+      font-size: 20px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .badge {
+      background-color: oklch(96.2% 0.044 156.743);
+      padding-left: 10px;
+      padding-right: 10px;
+      border-radius: 20px;
+      padding: 5px;
+      font-size: 15px;
+      border: 1px solid oklch(52.7% 0.154 150.069);
+      color: oklch(52.7% 0.154 150.069);
+    }
+
+    .address-label {
+      gap: 2px;
+    }
+
+    .required {
+      color: red;
+    }
+
+    /* ===== grid layout ===== */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* ===== form group ===== */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #555;
+    }
+
+    /* ===== inputs ===== */
+    input,
+    select,
+    textarea {
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+      transition: .2s;
+      background: #fafafa;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #ff7a00;
+      box-shadow: 0 0 0 3px rgba(4, 4, 4, 0.15);
+      background: white;
+    }
+
+    /* =========================
+   TABLET
+========================= */
+    @media (max-width: 1024px) {
+
+      .container {
         grid-template-columns: 1fr;
       }
 
-      .cart {
-        position: relative;
-        top: auto;
+      .summary {
+        position: sticky;
+        bottom: 0;
       }
     }
 
-    @media (max-width: 640px) {
-      .grid {
-        grid-template-columns: 1fr;
+
+    /* =========================
+   MOBILE
+========================= */
+    @media (max-width: 768px) {
+
+      body {
+        padding: 15px;
+      }
+
+      .item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .item img {
+        width: 100%;
+        height: 140px;
+        border-radius: 12px;
+      }
+
+      .qty {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .subtotal {
+        width: 100%;
+        text-align: right;
+        font-size: 14px;
+      }
+
+      .summary {
+        margin-top: 20px;
+      }
+
+      textarea {
+        font-size: 14px;
+      }
+
+      .checkout {
+        width: 100%;
       }
     }
   </style>
 </head>
 
 <body>
-  <header>
-    <h1>🍔 Menu</h1>
 
-    <div class="cart-pill" id="cartPill" title="Go to cart">
-      <span>Cart</span>
-      <span class="badge" id="cartCount">0</span>
+  <div class="container">
+
+    <!-- LEFT : CART ITEMS -->
+    <div class="cart-box">
+      <h2>Your Cart</h2>
+
+      <?php
+      $grandTotal = 0;
+
+      while ($item = $result->fetch_assoc()):
+        $subtotal = $item['price'] * $item['quantity'];
+        $grandTotal += $subtotal;
+
+        $img = !empty($item['image'])
+          ? "../uploads/menu/" . $item['image']
+          : "https://via.placeholder.com/80";
+        ?>
+
+        <div class="item">
+          <img src="<?= $img ?>">
+
+          <div class="info">
+            <div><?= htmlspecialchars($item['name']) ?></div>
+            <div class="price">RM <?= number_format($item['price'], 2) ?></div>
+          </div>
+
+          <div class="qty">
+            <button onclick="updateQty(<?= $item['cartId'] ?>,-1)">−</button>
+            <?= $item['quantity'] ?>
+            <button onclick="updateQty(<?= $item['cartId'] ?>,1)">+</button>
+          </div>
+
+          <div class="subtotal">
+            RM <?= number_format($subtotal, 2) ?>
+          </div>
+        </div>
+
+      <?php endwhile; ?>
+
     </div>
-  </header>
 
-  <main class="wrap">
-    <!-- MENU GRID -->
-    <section class="grid" id="menuGrid">
-      <?php if (count($menuItems) === 0): ?>
-        <p style="color: var(--muted);">No active food items found.</p>
-      <?php else: ?>
-        <?php foreach ($menuItems as $it): ?>
-          <article class="card" data-id="<?= (int) $it['foodId'] ?>" data-name="<?= htmlspecialchars($it['name']) ?>"
-            data-price="<?= htmlspecialchars($it['price']) ?>">
-            <img src="<?= htmlspecialchars(safeImg($it['image'])) ?>" alt="<?= htmlspecialchars($it['name']) ?>">
-            <div class="overlay"></div>
 
-            <div class="info">
-              <p class="name"><?= htmlspecialchars($it['name']) ?></p>
-              <p class="price">RM <?= number_format((float) $it['price'], 2) ?></p>
+    <!-- RIGHT : CHECKOUT -->
+    <form class="summary" action="process-checkout.php" method="POST">
 
-              <div class="qty" aria-label="quantity">
-                <button type="button" class="dec">−</button>
-                <input type="text" class="qtyInput" value="1" readonly>
-                <button type="button" class="inc">+</button>
-              </div>
-
-              <button type="button" class="add-btn">ADD TO CART</button>
-            </div>
-          </article>
-        <?php endforeach; ?>
-      <?php endif; ?>
-    </section>
-
-    <!-- CART -->
-    <aside class="cart" aria-label="cart">
-      <h2>🧾 Cart</h2>
-      <p class="hint">Pick quantity → Add to cart → Checkout (POST to PHP).</p>
-
-      <div class="cart-list" id="cartList"></div>
+      <h3>Order Summary</h3>
 
       <div class="total">
-        <span>Total</span>
-        <strong id="cartTotal">RM 0.00</strong>
+        Total: <span class="badge">RM <?= number_format($grandTotal, 2) ?></span>
       </div>
 
-      <!-- ✅ checkout: 先把 cart JSON POST 去 checkout.php（你们组长那边如果已有 checkout 就改 action） -->
-      <form method="post" action="checkout.php" id="checkoutForm">
-        <input type="hidden" name="cart_json" id="cartJson">
-        <button class="checkout" id="checkoutBtn" disabled>Checkout</button>
-      </form>
-    </aside>
-  </main>
+      <div class="form-group">
+        <label for="address" class="address-label">Delivery Address <span class="required">*</span></label>
+        <textarea id="address" name="address" class="form-control" rows="3"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="extraNotes">Extra Notes</label>
+        <textarea id="extraNotes" name="extraNotes" class="form-control" rows="3"></textarea>
+      </div>
+
+      <div class="form-grid">
+
+        <!-- State -->
+        <div class="form-group">
+          <label for="state">Your State</label>
+          <select id="state" name="state" required>
+            <option value="">Select State</option>
+            <option value="Johor">Johor</option>
+            <option value="Kedah">Kedah</option>
+            <option value="Kelantan">Kelantan</option>
+            <option value="Melaka">Melaka</option>
+            <option value="Negeri Sembilan">Negeri Sembilan</option>
+            <option value="Pahang">Pahang</option>
+            <option value="Perak">Perak</option>
+            <option value="Perlis">Perlis</option>
+            <option value="Pulau Pinang">Pulau Pinang</option>
+            <option value="Sabah">Sabah</option>
+            <option value="Sarawak">Sarawak</option>
+            <option value="Selangor">Selangor</option>
+            <option value="Terengganu">Terengganu</option>
+            <option value="Kuala Lumpur">Kuala Lumpur</option>
+            <option value="Labuan">Labuan</option>
+            <option value="Putrajaya">Putrajaya</option>
+          </select>
+        </div>
+
+        <!-- District -->
+        <div class="form-group">
+          <label for="district">District</label>
+          <input id="district" type="text" name="district" placeholder="Petaling Jaya" required>
+        </div>
+
+      </div>
+
+      <button class="checkout">Place Order</button>
+
+    </form>
+
+  </div>
+
 
   <script>
-    // ======= CART LOGIC (front-end) =======
-    const cart = {}; // {id: {id, name, price, qty}}
-
-    const cartList = document.getElementById("cartList");
-    const cartTotal = document.getElementById("cartTotal");
-    const cartCount = document.getElementById("cartCount");
-    const cartJson = document.getElementById("cartJson");
-    const checkoutBtn = document.getElementById("checkoutBtn");
-
-    function formatRM(n) { return "RM " + n.toFixed(2); }
-
-    function renderCart() {
-      const items = Object.values(cart);
-      cartList.innerHTML = "";
-
-      if (items.length === 0) {
-        cartList.innerHTML = `<p style="color: var(--muted); margin:0;">Cart is empty.</p>`;
-        cartTotal.textContent = formatRM(0);
-        cartCount.textContent = "0";
-        cartJson.value = "";
-        checkoutBtn.disabled = true;
-        return;
-      }
-
-      let total = 0;
-      let count = 0;
-
-      items.forEach(it => {
-        const line = it.price * it.qty;
-        total += line;
-        count += it.qty;
-
-        const row = document.createElement("div");
-        row.className = "cart-item";
-        row.innerHTML = `
-        <div>
-          <p class="title">${it.name}</p>
-          <p class="sub">${formatRM(it.price)} × ${it.qty} = <strong>${formatRM(line)}</strong></p>
-        </div>
-        <div class="right">
-          <div style="display:flex;gap:6px;">
-            <button type="button" class="mini-btn" data-act="minus">−</button>
-            <button type="button" class="mini-btn" data-act="plus">+</button>
-          </div>
-          <button type="button" class="mini-btn danger" data-act="remove">Remove</button>
-        </div>
-      `;
-
-        row.querySelector('[data-act="minus"]').onclick = () => changeQty(it.id, -1);
-        row.querySelector('[data-act="plus"]').onclick = () => changeQty(it.id, +1);
-        row.querySelector('[data-act="remove"]').onclick = () => removeItem(it.id);
-
-        cartList.appendChild(row);
-      });
-
-      cartTotal.textContent = formatRM(total);
-      cartCount.textContent = String(count);
-
-      // ✅ POST 的内容（给 checkout.php）
-      cartJson.value = JSON.stringify(items);
-      checkoutBtn.disabled = false;
+    function updateQty(cartId, delta) {
+      fetch('update-cart-quantity.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `cartId=${cartId}&delta=${delta}`
+      }).then(() => location.reload());
     }
-
-    function addToCart(id, name, price, qty) {
-      if (!cart[id]) cart[id] = { id: Number(id), name, price: Number(price), qty: 0 };
-      cart[id].qty += qty;
-      renderCart();
-    }
-
-    function changeQty(id, delta) {
-      if (!cart[id]) return;
-      cart[id].qty += delta;
-      if (cart[id].qty <= 0) delete cart[id];
-      renderCart();
-    }
-
-    function removeItem(id) {
-      delete cart[id];
-      renderCart();
-    }
-
-    // ======= Bind card events =======
-    document.querySelectorAll(".card").forEach(card => {
-      const id = card.dataset.id;
-      const name = card.dataset.name;
-      const price = card.dataset.price;
-
-      const input = card.querySelector(".qtyInput");
-      card.querySelector(".dec").addEventListener("click", () => {
-        input.value = String(Math.max(1, Number(input.value) - 1));
-      });
-      card.querySelector(".inc").addEventListener("click", () => {
-        input.value = String(Math.min(99, Number(input.value) + 1));
-      });
-      card.querySelector(".add-btn").addEventListener("click", () => {
-        addToCart(id, name, price, Number(input.value));
-        input.value = "1";
-      });
-    });
-
-    // scroll to cart
-    document.getElementById("cartPill").addEventListener("click", () => {
-      document.querySelector(".cart").scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-
-    renderCart();
   </script>
+
 </body>
 
 </html>

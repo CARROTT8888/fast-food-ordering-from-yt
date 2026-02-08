@@ -2,11 +2,25 @@
 require_once '../foodDB.php';
 session_start();
 
-// check if the session variable is exist
 if (!isset($_SESSION['userId'])) {
     header("Location: sign-in.php");
     exit();
 }
+
+if ($_SESSION['role'] !== 'user' && $_SESSION['role'] !== 'staff') {
+    header("Location: warning.php");
+    exit();
+}
+
+// Get initial cart count from database
+$userId = $_SESSION['userId'];
+$countQuery = "SELECT SUM(quantity) as totalItems FROM carts WHERE userId = ?";
+$stmtCount = $conn->prepare($countQuery);
+$stmtCount->bind_param("i", $userId);
+$stmtCount->execute();
+$countResult = $stmtCount->get_result();
+$countData = $countResult->fetch_assoc();
+$initialCount = $countData['totalItems'] ? $countData['totalItems'] : 0;
 ?>
 
 <!DOCTYPE html>
@@ -62,7 +76,10 @@ if (!isset($_SESSION['userId'])) {
 
         .logo {
             font-size: 22px;
-            font-weight: 600
+            font-weight: bolder;
+            color: red;
+            text-decoration: none;
+            cursor: pointer;
         }
 
         .search {
@@ -77,7 +94,7 @@ if (!isset($_SESSION['userId'])) {
         }
 
         .cart-btn {
-            background: #ff7a00;
+            background: red;
             color: white;
             border: none;
             padding: 10px 18px;
@@ -160,13 +177,13 @@ if (!isset($_SESSION['userId'])) {
         }
 
         .price {
-            color: #ff7a00;
+            color: red;
             font-weight: 600;
             margin: 8px 0
         }
 
         .add-btn {
-            background: #ff7a00;
+            background: red;
             color: white;
             border: none;
             padding: 8px 14px;
@@ -199,7 +216,7 @@ if (!isset($_SESSION['userId'])) {
         }
 
         .checkout {
-            background: #ff7a00;
+            background: red;
             color: white;
             border: none;
             padding: 12px;
@@ -212,17 +229,55 @@ if (!isset($_SESSION['userId'])) {
             justify-content: space-between;
             margin-bottom: 10px
         }
+
+        .cart {
+            position: fixed;
+            right: -350px;
+            /* Hidden by default */
+            top: 0;
+            width: 350px;
+            height: 100%;
+            background: white;
+            box-shadow: -4px 0 15px rgba(0, 0, 0, .15);
+            padding: 20px;
+            transition: .3s ease-in-out;
+            /* Smooth slide */
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        .cart.open {
+            right: 0;
+            /* Slide in */
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .card-link {
+            text-decoration: none;
+            color: inherit;
+        }
     </style>
 </head>
 
 <body>
 
     <header>
-        <div class="logo">🍔 FastFood</div>
+        <a class="logo" href="home.php">YouTube Food</a>
         <div class="search">
             <input type="text" placeholder="Search food..." oninput="searchFood(this.value)">
         </div>
-        <button class="cart-btn" onclick="toggleCart()">Cart (<span id="cartCount">0</span>)</button>
+        <a href="cart.php">
+            <button class="cart-btn"><i class='bx bxs-cart'></i> (<span
+                    id="cartCount"><?= $initialCount ?></span>)</button>
+        </a>
     </header>
 
     <div class="categories" id="categoryTabs">
@@ -249,26 +304,28 @@ if (!isset($_SESSION['userId'])) {
         if ($menuResult->num_rows > 0):
             while ($data = $menuResult->fetch_assoc()):
                 ?>
-                <div class="card">
-                    <?php
-                    $imgPath = !empty($data['image']) ? "../uploads/menu/" . $data['image'] : "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYXJnaGVyaXRhJTIwcGl6emF8ZW58MXx8fHwxNzcwMTEzNjk2fDA&ixlib=rb-4.1.0&q=80&w=1080";
-                    ?>
-                    <img src="<?= $imgPath ?>" alt="<?= htmlspecialchars($data['name']) ?>">
+                <a href="food-details.php?id=<?= $data['foodId'] ?>" class="card-link">
+                    <div class="card">
+                        <?php
+                        $imgPath = !empty($data['image']) ? "../uploads/menu/" . $data['image'] : "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYXJnaGVyaXRhJTIwcGl6emF8ZW58MXx8fHwxNzcwMTEzNjk2fDA&ixlib=rb-4.1.0&q=80&w=1080";
+                        ?>
+                        <img src="<?= $imgPath ?>" alt="<?= htmlspecialchars($data['name']) ?>">
 
-                    <div class="card-body">
-                        <h3><?= htmlspecialchars($data['name']) ?></h3>
+                        <div class="card-body">
+                            <h3><?= htmlspecialchars($data['name']) ?></h3>
 
-                        
 
-                        <div class="card-footer">
-                            <div class="price">RM <?= number_format($data['price'], 2) ?></div>
-                            <button class="add-btn"
-                                onclick="addToCart(<?= $data['foodId'] ?>, '<?= addslashes($data['name']) ?>', <?= $data['price'] ?>)">
-                                + Add to Cart
-                            </button>
+
+                            <div class="card-footer">
+                                <div class="price">RM <?= number_format($data['price'], 2) ?></div>
+                                <button class="add-btn"
+                                    onclick="addToCart(<?= $data['foodId'] ?>, '<?= addslashes($data['name']) ?>', <?= $data['price'] ?>)">
+                                    + Add to Cart
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </a>
                 <?php
             endwhile;
         else:
@@ -276,6 +333,41 @@ if (!isset($_SESSION['userId'])) {
         endif;
         ?>
     </div>
+
+    <script>
+        let cart = JSON.parse(localStorage.getItem('foodCart')) || [];
+
+        function addToCart(id, name, price) {
+            fetch('add-to-db-cart.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `foodId=${id}`
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Set the count to exactly what the database says
+                        document.getElementById('cartCount').innerText = data.newCount;
+                        //alert(name + " added!");
+                    }
+                });
+        }
+
+        function searchFood(query) {
+            // Get the current category from the URL if it exists
+            const urlParams = new URLSearchParams(window.location.search);
+            const cat = urlParams.get('cat') || 0;
+
+            // Fetch filtered data from our new PHP script
+            fetch(`search-food.php?q=${encodeURIComponent(query)}&cat=${cat}`)
+                .then(response => response.text())
+                .then(html => {
+                    // Replace the content of the grid with the search results
+                    document.getElementById('foodGrid').innerHTML = html;
+                })
+                .catch(err => console.error("Search error:", err));
+        }
+    </script>
 
 </body>
 

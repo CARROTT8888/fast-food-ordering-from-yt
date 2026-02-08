@@ -1,71 +1,57 @@
 <?php
 require_once '../foodDB.php';
-session_start();
 
-if ($_SESSION['role'] !== 'admin') {
-    header("Location: warning.php");
-    exit();
+$error_msg = "";
+$success_msg = "";
+$category = null;
+
+if (isset($_GET['id']) && is_numeric($_GET['id'])) {
+    $id = intval($_GET['id']);
+    $stmt = $conn->prepare("SELECT * FROM food_categories WHERE categoryId = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $category = $result->fetch_assoc();
+    } else {
+        die("<div class=''>Error: Category ID not found. <a href='dashboard.php'>Go Back</a></div>");
+    }
+    $stmt->close();
+} else {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        die("<div class=''>Error: Invalid Request. <a href='dashboard.php'>Go Back</a></div>");
+    }
 }
 
-// check if the session variable is exist
-if (!isset($_SESSION['userId'])) {
-    header("Location: sign-in.php");
-    exit();
-}
-// check if the user is not admin or staff
-if ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'staff') {
-    header("Location: warning.php");
-    exit();
-}
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $categoryId = intval($_POST['categoryId']);
+    $title = trim($_POST['title']);
+    $active = $_POST['active'];
 
-$title = '';
-$status = 'visible';
-$nameError = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    // ===== Get data safely =====
-    $title = trim($_POST['title'] ?? '');
-    $status = $_POST['active'] ?? 'visible';
-
-    // ===== Validation =====
-    if ($title === '') {
-        $nameError = "Category title is required.";
-    } elseif (strlen($title) > 100) {
-        $nameError = "Title too long (max 100 characters).";
-    } elseif (!in_array($status, ['visible', 'invisible'])) {
-        $nameError = "Invalid status selected.";
+    if (empty($title) || empty($active)) {
+        $error_msg = "Validation Error: Please check your inputs.";
+        $category['title'] = $title;
+        $category['active'] = $active;
     }
 
-    // ===== Duplicate check =====
-    if (!$nameError) {
-        $stmt = $conn->prepare("SELECT categoryId FROM food_categories WHERE title = ?");
-        $stmt->bind_param("s", $title);
-        $stmt->execute();
-        $stmt->store_result();
-
-        if ($stmt->num_rows > 0) {
-            $nameError = "Category already exists.";
-        }
-        $stmt->close();
-    }
-
-    // ===== Insert =====
-    if (!$nameError) {
-        $stmt = $conn->prepare(
-            "INSERT INTO food_categories (title, active) VALUES (?, ?)"
-        );
-        $stmt->bind_param("ss", $title, $status);
+    if (empty($error_msg)) {
+        $sql = "UPDATE food_categories SET title=?, active=? WHERE categoryId=?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssi", $title, $active, $categoryId);
 
         if ($stmt->execute()) {
-            $_SESSION['success'] = "Category added successfully!";
-            header("Location: category_list.php"); // redirect
-            exit();
+            $success_msg = "The category updated successfully!";
+            $category['title'] = $title;
+            $category['active'] = $active;
+            header("Location: menu.php?message=success");
+        } else {
+            $error_msg = "Database Error: " . $stmt->error;
         }
-
         $stmt->close();
     }
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -74,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Food Category</title>
+    <title>Update The Category's Details</title>
     <!-- Poppins Font -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 
@@ -85,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="/styles/homepage.css">
 
     <!-- Webpage Icon -->
-    <link rel="Icon" href="img/youtube icon.png">
+    <link rel="Icon" href="../img/youtube icon.png">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
 
@@ -188,6 +174,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: #27ae60;
         }
 
+        .arrow-back {
+            color: black;
+        }
+
+        .arrow-back:hover {
+            color: #e74c3c;
+        }
+
         .btn-back {
             display: inline-flex;
             align-items: center;
@@ -210,68 +204,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             text-align: center;
             align-items: center;
         }
+
         .add-menu a {
             text-decoration: underline;
             text-align: center;
             color: #eb4034;
             font-weight: bold;
         }
+
+        .preview-container {
+            margin-top: 10px;
+            display: none;
+            text-align: center;
+        }
+
+        #imagePreview {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px dashed #ddd;
+        }
     </style>
+
 </head>
 
 <body>
+
     <div class="content">
         <div class="">
             <a href="dashboard.php" class="btn-back">
-                <i class='bx bx-arrow-back'></i> Back to Dashboard
+                <i class='bx bx-arrow-back arrow-back'></i> Back to Dashboard
             </a>
         </div>
 
-        <div class="form-card">
-            <div class="card-header">
-                <h1 class="title">Category Details</h1>
-                <p class="subtitle">Fill in the information below to create a new category.</p>
+        <?php if (!empty($error_msg)): ?>
+            <div class="alert alert-danger"><?php echo $error_msg; ?></div>
+        <?php endif; ?>
+
+        <?php if (!empty($success_msg)): ?>
+            <div class="alert alert-success"><?php echo $success_msg; ?></div>
+        <?php endif; ?>
+
+        <?php if ($category): ?>
+            <div class="form-card">
+                <div class="card-header">
+                    <h1 class="title">Update the Category's Details</h1>
+                    <p class="subtitle">Fill in the information below to add a new food item to the menu.</p>
+                </div>
+                <form action="update-food-category.php?id=<?php echo $category['categoryId']; ?>" method="POST"
+                    enctype="multipart/form-data" class="styled-form">
+                    <input type="hidden" name="categoryId" value="<?php echo $category['categoryId']; ?>">
+
+                    <div class="form-group">
+                        <label for="title">Category's Title</label>
+                        <input type="text" id="title" name="title" class="form-control"
+                            value="<?php echo htmlspecialchars($category['title']); ?>" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="active">Select Status</label>
+                        <select name="active" class="form-control" required>
+                            <option value="visible" <?= $category['active'] == 'visible' ? 'selected' : '' ?>>Visible (Shown on site)</option>
+                            <option value="invisible" <?= $category['active'] == 'invisible' ? 'selected' : '' ?>>Inactive (Hidden)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" id="submitBtn" class="btn-save">
+                            <i class="fas fa-plus"></i> Update Food Category
+                        </button>
+                    </div>
+                </form>
             </div>
-
-            <form id="productForm" action="add-category.php" method="POST" class="styled-form">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="title">Category Title <span class="required">*</span></label>
-                        <input type="text" id="title" name="title" placeholder="e.g. Fresh Vegetables"
-                            value="<?= htmlspecialchars($title) ?>" class="<?= $nameError ? 'input-error' : '' ?>"
-                            required>
-                        <?php if ($nameError): ?>
-                            <span class="error-text"><i class="fas fa-exclamation-circle"></i> <?= $nameError; ?></span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="active">Display Status</label>
-                        <div class="select-wrapper">
-                            <select name="active" id="active">
-                                <option value="visible" <?= $status == 'visible' ? 'selected' : '' ?>>Visible (Shown on
-                                    site)</option>
-                                <option value="invisible" <?= $status == 'invisible' ? 'selected' : '' ?>>Invisible
-                                    (Hidden)</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" id="submitBtn" class="btn-save">
-                        <i class="fas fa-plus"></i> Create Category
-                    </button>
-                </div>
-            </form>
-        </div>
-        <p class="add-menu">
-            If you want to create menu, <a href="add-food-item.php">Tab Here!</a>
-        </p>
-    </div>
+        <?php endif; ?>
 </body>
 
 </html>
-<?php ?>

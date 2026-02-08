@@ -172,37 +172,40 @@ $usersResult = $conn->query("SELECT userId, fullName, email, address, contactNum
 
 <body>
   <?php require_once '../includes/authorized/sidebar.php'; ?>
-  <div class="header">
-    <h2>Welcome, <?= htmlspecialchars($_SESSION['username']) ?></h2>
+   <div class="header">
+    <h2>Food List</h2>
   </div>
 
+  <div class="table-wrapper">
+    <table>
+      <tr>
+        <th>Image</th>
+        <th>Name</th>
+        <th>Price</th>
+        <th>Category</th>
+        <th>Featured</th>
+        <th>Active</th>
+        <th>Action</th>
+      </tr>
 
-  <!-- ===== STAT CARDS ===== -->
-  <div class="cards">
-    <div class="card red">
-      <h2><?= $totalUsers ?></h2>
-      <p>Total Users</p>
-    </div>
-
-    <div class="card orange">
-      <h2><?= $totalAdmins ?></h2>
-      <p>Admins</p>
-    </div>
-
-    <div class="card blue">
-      <h2><?= $totalStaffs ?></h2>
-      <p>Staffs</p>
-    </div>
-
-    <div class="card green">
-      <h2><?= $totalCustomers ?></h2>
-      <p>Customers</p>
-    </div>
+      <?php while($food = $foodsResult->fetch_assoc()): ?>
+        <tr>
+          <td>
+            <img src="<?= htmlspecialchars($food['image']) ?>" style="width:70px;height:50px;object-fit:cover;border-radius:8px;">
+          </td>
+          <td><?= htmlspecialchars($food['name']) ?></td>
+          <td>RM <?= number_format((float)$food['price'], 2) ?></td>
+          <td><?= htmlspecialchars($food['categoryTitle'] ?? '-') ?></td>
+          <td><?= htmlspecialchars($food['featured']) ?></td>
+          <td><?= htmlspecialchars($food['active']) ?></td>
+          <td>
+            <a class="action-btn" href="edit-food.php?id=<?= (int)$food['foodId'] ?>">Edit</a>
+            <a class="action-btn" style="background:#444;"
+               onclick="return confirm('Delete this item?')"
+               href="delete-food.php?id=<?= (int)$food['foodId'] ?>">Delete</a>
+          </td>
+        </tr>
+      <?php endwhile; ?>
+    </table>
   </div>
-  <div class="header" style="display: flex; justify-content: center;">
-    <h2>You may explore the dashboard here!</h2>
-  </div>
-
 </body>
-
-</html>
