@@ -2,129 +2,133 @@
 $current = basename($_SERVER['PHP_SELF']);
 ?>
 
-<!-- Poppins Font -->
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-
-<!-- Boxicons CDN Link -->
 <link href='https://unpkg.com/boxicons@2.1.2/css/boxicons.min.css' rel='stylesheet'>
 
-<!-- CSS File -->
-<link rel="stylesheet" href="/styles/homepage.css">
-
-<!-- Webpage Icon -->
-<link rel="Icon" href=".../img/youtube icon.png">
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap"
-  rel="stylesheet">
-
 <style>
+  /* =========================
+   Layout
+========================= */
   .layout {
     display: flex;
     min-height: 100vh;
-    font-family: Poppins, sans-serif;
     background: #f6f7fb;
+    font-family: Poppins, sans-serif;
   }
 
-
-  /* ===================== */
-  /* Sidebar */
-  /* ===================== */
+  /* =========================
+   Sidebar
+========================= */
   .sidebar {
-    width: 250px;
-    background: whitesmoke;
-    color: black;
+    width: 260px;
+    background: #ffffff;
     padding: 25px 18px;
     position: fixed;
     height: 100%;
-    box-shadow: 4px 0 20px rgba(0, 0, 0, .12);
-    transition: .3s;
+    left: 0;
+    top: 0;
+    box-shadow: 4px 0 18px rgba(0, 0, 0, .08);
+    transition: .3s ease;
+    z-index: 1000;
   }
 
   /* logo */
-  .sidebar .logo {
-    font-size: 22px;
-    font-weight: 700;
-    text-align: center;
+  .logo {
+    font-size: 20px;
+    font-weight: bold;
+    text-align: left;
     margin-bottom: 35px;
-    letter-spacing: 1px;
-    color: red;
+    color: #e53935;
   }
-
 
   /* menu */
   .menu {
     list-style: none;
     padding: 0;
-    margin: 0;
   }
 
   .menu li {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
 
-
-  /* link */
   .menu a {
     display: flex;
     align-items: center;
     gap: 12px;
-
-    padding: 12px 16px;
+    padding: 12px 14px;
     border-radius: 12px;
-
-    color: black;
     text-decoration: none;
+    color: #444;
     font-size: 14px;
-
-    transition: .25s;
+    transition: .2s;
   }
-
 
   /* hover */
   .menu a:hover {
-    background: rgba(255, 255, 255, .15);
-    transform: translateX(6px);
+    background: #f2f2f2;
+    transform: translateX(4px);
   }
-
 
   /* active */
   .menu a.active {
-    background: white;
-    color: #d32f2f;
+    background: #e53935;
+    color: white;
     font-weight: 600;
-    box-shadow: 0 6px 14px rgba(0, 0, 0, .15);
   }
-
 
   /* icons */
   .menu i {
     font-size: 18px;
   }
 
-
-  /* ===================== */
-  /* Content */
-  /* ===================== */
+  /* =========================
+   Content
+========================= */
   .content-area {
-    margin-left: 250px;
-    padding: 35px;
+    margin-left: 260px;
+    padding: 30px;
     width: 100%;
+    transition: .3s;
   }
 
+  /* =========================
+   Toggle Button
+========================= */
+  .toggle-btn {
+    display: none;
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    background: #e53935;
+    color: white;
+    border: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    z-index: 1100;
+    cursor: pointer;
+  }
 
-  /* ===================== */
-  /* Mobile */
-  /* ===================== */
+  /* =========================
+   Overlay (mobile)
+========================= */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .35);
+    display: none;
+    z-index: 900;
+  }
+
+  /* =========================
+   Mobile Responsive
+========================= */
   @media(max-width:768px) {
 
+    .toggle-btn {
+      display: block;
+    }
+
     .sidebar {
-      width: 200px;
-      position: fixed;
-      left: -200px;
+      left: -260px;
     }
 
     .sidebar.open {
@@ -135,32 +139,18 @@ $current = basename($_SERVER['PHP_SELF']);
       margin-left: 0;
     }
 
-    .toggle-btn {
+    .overlay.show {
       display: block;
     }
-  }
-
-
-  /* ===================== */
-  /* Toggle button */
-  /* ===================== */
-  .toggle-btn {
-    display: none;
-    position: fixed;
-    top: 18px;
-    left: 18px;
-    background: #d32f2f;
-    color: white;
-    border: none;
-    padding: 8px 10px;
-    border-radius: 8px;
-    z-index: 999;
-    cursor: pointer;
   }
 </style>
 
 
-<button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+<button class="toggle-btn" onclick="toggleSidebar()">
+  <i class='bx bx-menu'></i>
+</button>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
 <div class="layout">
 
@@ -190,30 +180,43 @@ $current = basename($_SERVER['PHP_SELF']);
 
       <li>
         <a href="add-category.php" class="<?= $current == 'add-category.php' ? 'active' : '' ?>">
-          <i class='bx bxs-book-add'></i> Add Category
+          <i class='bx bx-plus'></i> Add Category
+        </a>
+      </li>
+
+      <li>
+        <a href="add-food-item.php" class="<?= $current == 'add-food-item.php' ? 'active' : '' ?>">
+          <i class='bx bxs-book-add'></i> Add Food Item
         </a>
       </li>
 
       <li>
         <a href="dashboard-orders.php" class="<?= $current == 'dashboard-orders.php' ? 'active' : '' ?>">
-          <i class='bx bxs-bowl-hot' ></i> Orders
+          <i class='bx bxs-receipt'></i> Orders
         </a>
       </li>
 
       <li>
         <a href="dashboard-users.php" class="<?= $current == 'dashboard-users.php' ? 'active' : '' ?>">
-          <i class='bx bxs-user' ></i> Users
+          <i class='bx bxs-user'></i> Users
         </a>
       </li>
 
       <li>
-        <a href="/web/me/sign-out.php" style="color: red; font-weight: bold;">
-          <i class='bx bx-log-out' ></i> Logout
+        <a href="/web/me/sign-out.php" style="color:#e53935;font-weight:600;">
+          <i class='bx bx-log-out'></i> Logout
         </a>
       </li>
 
     </ul>
   </div>
 
-
   <div class="content-area">
+
+
+    <script>
+      function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('overlay').classList.toggle('show');
+      }
+    </script>

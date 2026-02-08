@@ -35,7 +35,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In</title>
     <!-- Webpage Icon -->
-    <link rel="Icon" href="img/youtube icon.png">
+    <link rel="Icon" href="../img/youtube icon.png">
     <style>
         *::selection {
             color: #fff;
@@ -195,7 +195,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </div>
 
                 <div class="field">
-                    <label>Password</label>
+                    <label style="display: flex; justify-content: space-between;">
+                        <span>Password</span>
+                        <a style="color: red; text-decoration: underline;" href="forgot-password.php">Forgot Password?</a>
+                    </label>
                     <div class="password-wrapper">
                         <input type="password" name="password" placeholder="********" required />
                     </div>
